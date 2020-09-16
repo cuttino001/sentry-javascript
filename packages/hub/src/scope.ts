@@ -45,7 +45,7 @@ export class Scope implements ScopeInterface {
 
   /** Contexts */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected _contexts: { [key: string]: any } = {};
+  protected _contexts: { [key: string]: Record<any, any> } = {};
 
   /** Fingerprint */
   protected _fingerprint?: string[];
@@ -185,9 +185,14 @@ export class Scope implements ScopeInterface {
   /**
    * @inheritDoc
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public setContext(key: string, context: { [key: string]: any } | null): this {
-    this._contexts = { ...this._contexts, [key]: context };
+  public setContext(key: string, context: { [key: string]: Record<any, any> } | null): this {
+    if (context === null) {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+      delete this._contexts[key];
+    } else {
+      this._contexts = { ...this._contexts, [key]: context };
+    }
+
     this._notifyScopeListeners();
     return this;
   }
