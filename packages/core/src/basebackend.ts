@@ -1,3 +1,4 @@
+import { Session } from '@sentry/hub';
 import { Event, EventHint, Options, Severity, Transport } from '@sentry/types';
 import { logger, SentryError } from '@sentry/utils';
 
@@ -33,6 +34,9 @@ export interface Backend {
 
   /** Submits the event to Sentry */
   sendEvent(event: Event): void;
+
+  /** Submits the session to Sentry */
+  sendSession(session: Session): void;
 
   /**
    * Returns the transport that is used by the backend.
@@ -90,6 +94,20 @@ export abstract class BaseBackend<O extends Options> implements Backend {
   public sendEvent(event: Event): void {
     this._transport.sendEvent(event).then(null, reason => {
       logger.error(`Error while sending event: ${reason}`);
+    });
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public sendSession(session: Session): void {
+    if (!this._transport.sendSession) {
+      logger.warn('sendSession not implemented for a transport used');
+      return;
+    }
+
+    this._transport.sendSession(session).then(null, reason => {
+      logger.error(`Error while sending session: ${reason}`);
     });
   }
 

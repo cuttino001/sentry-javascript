@@ -1,4 +1,5 @@
-import { eventToSentryRequest } from '@sentry/core';
+import { eventToSentryRequest, sessionToSentryRequest } from '@sentry/core';
+import { Session } from '@sentry/hub';
 import { Event, Response, Status } from '@sentry/types';
 import { logger, parseRetryAfterHeader, SyncPromise } from '@sentry/utils';
 
@@ -62,5 +63,41 @@ export class XHRTransport extends BaseTransport {
         request.send(sentryReq.body);
       }),
     );
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public sendSession(session: Session): PromiseLike<Response> {
+    const sentryReq = sessionToSentryRequest(session, this._api);
+
+    return new SyncPromise<Response>((resolve, reject) => {
+      const request = new XMLHttpRequest();
+
+      request.onreadystatechange = (): void => {
+        if (request.readyState !== 4) {
+          return;
+        }
+
+        const status = Status.fromHttpCode(request.status);
+
+        if (status === Status.Success) {
+          resolve({ status });
+          return;
+        }
+
+        reject(request);
+      };
+
+      request.open('POST', sentryReq.url);
+
+      for (const header in this.options.headers) {
+        if (this.options.headers.hasOwnProperty(header)) {
+          request.setRequestHeader(header, this.options.headers[header]);
+        }
+      }
+
+      request.send(sentryReq.body);
+    });
   }
 }

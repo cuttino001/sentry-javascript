@@ -140,6 +140,10 @@ export class IdleTransaction extends Transaction {
       logger.log('[Tracing] No active IdleTransaction');
     }
 
+    if (this._idleHub) {
+      this._idleHub.endSession();
+    }
+
     return super.finish(endTimestamp);
   }
 

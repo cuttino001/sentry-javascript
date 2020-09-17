@@ -22,6 +22,7 @@ import { consoleSandbox, getGlobalObject, isNodeEnv, logger, timestampWithMs, uu
 
 import { Carrier, DomainAsCarrier, Layer } from './interfaces';
 import { Scope } from './scope';
+import { Session } from './session';
 
 /**
  * API compatibility version of this hub.
@@ -379,6 +380,47 @@ export class Hub implements HubInterface {
    */
   public traceHeaders(): { [key: string]: string } {
     return this._callExtensionMethod<{ [key: string]: string }>('traceHeaders');
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public startSession(): void {
+    const top = this.getStackTop();
+    if (!top.scope) {
+      return;
+    }
+
+    const client = top.client;
+    const { release, environment } = (client && client.getOptions()) || {};
+
+    // End existing session if there's one
+    this.endSession();
+    top.scope.setSession(
+      new Session({
+        release,
+        environment,
+        user: top.scope.getUser(),
+      }),
+    );
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public endSession(): void {
+    const top = this.getStackTop();
+    if (!top.scope) {
+      return;
+    }
+    const session = top.scope.getSession();
+    if (session) {
+      session.close();
+      if (top.client) {
+        top.client.captureSession(session);
+      }
+    }
+    top.scope.setSession(undefined);
   }
 
   /**

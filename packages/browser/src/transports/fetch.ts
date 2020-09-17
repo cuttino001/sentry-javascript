@@ -1,4 +1,5 @@
-import { eventToSentryRequest } from '@sentry/core';
+import { eventToSentryRequest, sessionToSentryRequest } from '@sentry/core';
+import { Session } from '@sentry/hub';
 import { Event, Response, Status } from '@sentry/types';
 import { getGlobalObject, logger, parseRetryAfterHeader, supportsReferrerPolicy, SyncPromise } from '@sentry/utils';
 
@@ -71,5 +72,46 @@ export class FetchTransport extends BaseTransport {
           .catch(reject);
       }),
     );
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public sendSession(session: Session): PromiseLike<Response> {
+    const sentryReq = sessionToSentryRequest(session, this._api);
+
+    const options: RequestInit = {
+      body: sentryReq.body,
+      method: 'POST',
+      // Despite all stars in the sky saying that Edge supports old draft syntax, aka 'never', 'always', 'origin' and 'default
+      // https://caniuse.com/#feat=referrer-policy
+      // It doesn't. And it throw exception instead of ignoring this parameter...
+      // REF: https://github.com/getsentry/raven-js/issues/1233
+      referrerPolicy: (supportsReferrerPolicy() ? 'origin' : '') as ReferrerPolicy,
+    };
+
+    if (this.options.fetchParameters !== undefined) {
+      Object.assign(options, this.options.fetchParameters);
+    }
+
+    if (this.options.headers !== undefined) {
+      options.headers = this.options.headers;
+    }
+
+    return new SyncPromise<Response>((resolve, reject) => {
+      global
+        .fetch(sentryReq.url, options)
+        .then(response => {
+          const status = Status.fromHttpCode(response.status);
+
+          if (status === Status.Success) {
+            resolve({ status });
+            return;
+          }
+
+          reject(response);
+        })
+        .catch(reject);
+    });
   }
 }

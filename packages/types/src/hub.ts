@@ -200,4 +200,10 @@ export interface Hub {
    * @returns The transaction which was just started
    */
   startTransaction(context: TransactionContext, customSamplingContext?: CustomSamplingContext): Transaction;
+
+  /** JSDoc */
+  startSession(): void;
+
+  /** JSDoc */
+  endSession(): void;
 }

@@ -186,6 +186,9 @@ export class BrowserTracing implements Integration {
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     const { beforeNavigate, idleTimeout, maxTransactionDuration } = this.options;
+    const hub = this._getCurrentHub();
+
+    hub.startSession();
 
     // if beforeNavigate returns undefined, we should not start a transaction.
     const ctx = beforeNavigate({
@@ -199,7 +202,6 @@ export class BrowserTracing implements Integration {
       return undefined;
     }
 
-    const hub = this._getCurrentHub();
     logger.log(`[Tracing] starting ${ctx.op} idleTransaction on scope`);
     const idleTransaction = startIdleTransaction(hub, ctx, idleTimeout, true);
     idleTransaction.registerBeforeFinishCallback((transaction, endTimestamp) => {
