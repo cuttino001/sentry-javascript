@@ -17,6 +17,7 @@ export function addDOMPropertiesToGlobal(properties: string[]): void {
   const global = getGlobalObject<NodeJS.Global & Window>();
 
   properties.forEach(prop => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     (global as any)[prop] = window[prop];
   });
 }
