@@ -1,5 +1,5 @@
 {
-  "name": "@sentry/browser",
+  "name": "@ircloud/browser",
   "version": "5.24.2",
   "description": "Official Sentry SDK for browsers",
   "repository": "git://github.com/getsentry/sentry-javascript.git",
@@ -19,9 +19,11 @@
     "@sentry/core": "5.24.2",
     "@sentry/types": "5.24.2",
     "@sentry/utils": "5.24.2",
+    "axios": "^0.20.0",
     "tslib": "^1.9.3"
   },
   "devDependencies": {
+    "@rollup/plugin-json": "^4.1.0",
     "@sentry-internal/eslint-config-sdk": "5.24.2",
     "@types/eslint": "^7.2.0",
     "@types/md5": "2.1.33",

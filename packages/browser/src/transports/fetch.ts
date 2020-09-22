@@ -1,10 +1,11 @@
 import { eventToSentryRequest } from '@sentry/core';
 import { Event, Response, Status } from '@sentry/types';
-import { getGlobalObject, logger, parseRetryAfterHeader, supportsReferrerPolicy, SyncPromise } from '@sentry/utils';
+import { logger, parseRetryAfterHeader, supportsReferrerPolicy, SyncPromise } from '@sentry/utils';
+import axios from 'axios';
 
 import { BaseTransport } from './base';
 
-const global = getGlobalObject<Window>();
+// const global = getGlobalObject<Window>();
 
 /** `fetch` based transport */
 export class FetchTransport extends BaseTransport {
@@ -45,16 +46,19 @@ export class FetchTransport extends BaseTransport {
 
     return this._buffer.add(
       new SyncPromise<Response>((resolve, reject) => {
-        global
-          .fetch(sentryReq.url, options)
+        axios
+          .post(sentryReq.url, options.body, {
+            headers: {
+              'Content-Type': 'application/json;charset=UTF-8',
+            },
+          })
           .then(response => {
+            console.log('sentryresponse', response);
             const status = Status.fromHttpCode(response.status);
-
             if (status === Status.Success) {
               resolve({ status });
               return;
             }
-
             if (status === Status.RateLimit) {
               const now = Date.now();
               /**
@@ -65,10 +69,40 @@ export class FetchTransport extends BaseTransport {
               this._disabledUntil = new Date(now + parseRetryAfterHeader(now, retryAfterHeader));
               logger.warn(`Too many requests, backing off till: ${this._disabledUntil}`);
             }
-
             reject(response);
           })
           .catch(reject);
+
+        // var axiosinstance = axios.create({ timeout: 1000 * 60 });
+        // axiosinstance.interceptors.request.use(
+        //   config => {
+        //     return config;
+        //   },
+        //   error => reject(error),
+        // );
+
+        // axiosinstance.interceptors.response.use();
+        //   global
+        //     .fetch(sentryReq.url, options)
+        //     .then(response => {
+        //       const status = Status.fromHttpCode(response.status);
+        //       if (status === Status.Success) {
+        //         resolve({ status });
+        //         return;
+        //       }
+        //       if (status === Status.RateLimit) {
+        //         const now = Date.now();
+        //         /**
+        //          * "The name is case-insensitive."
+        //          * https://developer.mozilla.org/en-US/docs/Web/API/Headers/get
+        //          */
+        //         const retryAfterHeader = response.headers.get('Retry-After');
+        //         this._disabledUntil = new Date(now + parseRetryAfterHeader(now, retryAfterHeader));
+        //         logger.warn(`Too many requests, backing off till: ${this._disabledUntil}`);
+        //       }
+        //       reject(response);
+        //     })
+        //     .catch(reject);
       }),
     );
   }

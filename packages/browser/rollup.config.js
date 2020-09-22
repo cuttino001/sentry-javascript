@@ -3,6 +3,7 @@ import typescript from 'rollup-plugin-typescript2';
 import license from 'rollup-plugin-license';
 import resolve from 'rollup-plugin-node-resolve';
 import commonjs from 'rollup-plugin-commonjs';
+import json from '@rollup/plugin-json';
 
 const commitHash = require('child_process')
   .execSync('git rev-parse --short HEAD', { encoding: 'utf-8' })
@@ -30,6 +31,7 @@ const paths = {
 };
 
 const plugins = [
+  json(),
   typescript({
     tsconfig: 'tsconfig.build.json',
     tsconfigOverride: {
