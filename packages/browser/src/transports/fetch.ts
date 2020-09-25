@@ -1,7 +1,7 @@
 import { eventToSentryRequest } from '@sentry/core';
 import { Event, Response, Status } from '@sentry/types';
 import { logger, parseRetryAfterHeader, supportsReferrerPolicy, SyncPromise } from '@sentry/utils';
-import axios from 'axios';
+// import axios from 'axios';
 
 import { BaseTransport } from './base';
 
@@ -46,63 +46,32 @@ export class FetchTransport extends BaseTransport {
 
     return this._buffer.add(
       new SyncPromise<Response>((resolve, reject) => {
-        axios
-          .post(sentryReq.url, options.body, {
-            headers: {
-              'Content-Type': 'application/json;charset=UTF-8',
-            },
-          })
-          .then(response => {
-            console.log('sentryresponse', response);
-            const status = Status.fromHttpCode(response.status);
-            if (status === Status.Success) {
-              resolve({ status });
-              return;
-            }
-            if (status === Status.RateLimit) {
-              const now = Date.now();
-              /**
-               * "The name is case-insensitive."
-               * https://developer.mozilla.org/en-US/docs/Web/API/Headers/get
-               */
-              const retryAfterHeader = response.headers.get('Retry-After');
-              this._disabledUntil = new Date(now + parseRetryAfterHeader(now, retryAfterHeader));
-              logger.warn(`Too many requests, backing off till: ${this._disabledUntil}`);
-            }
-            reject(response);
-          })
-          .catch(reject);
+        let xhr = new XMLHttpRequest();
+        xhr.responseType = 'json'; // 指定返回类型
 
-        // var axiosinstance = axios.create({ timeout: 1000 * 60 });
-        // axiosinstance.interceptors.request.use(
-        //   config => {
-        //     return config;
-        //   },
-        //   error => reject(error),
-        // );
+        xhr.onload = () => {
+          const status = Status.fromHttpCode(xhr.status);
+          if (status === Status.Success) {
+            resolve({ status });
+            return;
+          }
+          if (status === Status.RateLimit) {
+            const now = Date.now();
+            /**
+             * "The name is case-insensitive."
+             * https://developer.mozilla.org/en-US/docs/Web/API/Headers/get
+             */
+            const retryAfterHeader = xhr.response.headers.get('Retry-After');
+            this._disabledUntil = new Date(now + parseRetryAfterHeader(now, retryAfterHeader));
+            logger.warn(`Too many requests, backing off till: ${this._disabledUntil}`);
+          }
+          reject(xhr.response);
+        };
 
-        // axiosinstance.interceptors.response.use();
-        //   global
-        //     .fetch(sentryReq.url, options)
-        //     .then(response => {
-        //       const status = Status.fromHttpCode(response.status);
-        //       if (status === Status.Success) {
-        //         resolve({ status });
-        //         return;
-        //       }
-        //       if (status === Status.RateLimit) {
-        //         const now = Date.now();
-        //         /**
-        //          * "The name is case-insensitive."
-        //          * https://developer.mozilla.org/en-US/docs/Web/API/Headers/get
-        //          */
-        //         const retryAfterHeader = response.headers.get('Retry-After');
-        //         this._disabledUntil = new Date(now + parseRetryAfterHeader(now, retryAfterHeader));
-        //         logger.warn(`Too many requests, backing off till: ${this._disabledUntil}`);
-        //       }
-        //       reject(response);
-        //     })
-        //     .catch(reject);
+        xhr.open('post', sentryReq.url, true);
+        xhr.setRequestHeader('Content-type', 'application/json;charset=UTF-8'); // 设置content-type
+        console.log('-----', options.body);
+        xhr.send(options.body);
       }),
     );
   }
